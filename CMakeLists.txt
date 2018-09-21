@@ -43,7 +43,8 @@ add_library ( ${PROJECT_NAME} SHARED
         ${SOURCES} )
 
 target_include_directories ( ${PROJECT_NAME} BEFORE PRIVATE
-     $ENV{WILTON_HOME}/devel/include
+        $ENV{WILTON_HOME}/devel/include
+        "${CMAKE_CURRENT_BINARY_DIR}/jansson/include"
 )
 
 if ( WIN32 )
