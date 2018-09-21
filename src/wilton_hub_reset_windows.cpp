@@ -52,7 +52,7 @@ int reset_smart_hub(std::string pid, std::string vid)
         devinfo_data;
         if (status != CR_SUCCESS) {
             std::cout << "error: " << GetLastError() << std::endl;
-            eturn 1;
+            return 1;
         }
 
         std::cout << "device [" << pos << "]: " << buffer << std::endl;

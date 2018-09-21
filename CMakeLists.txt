@@ -36,7 +36,17 @@ set(SOURCES
 
 set(LIBS "")
 if ( WIN32 )
-        set(LIBS "")
+        set(LIBS
+            "C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.1A\\Lib\\x64\\SetupApi.lib"
+            "C:\\Program Files (x86)\\Windows Kits\\8.1\\Lib\\winv6.3\\um\\x64\\Cfgmgr32.lib"
+            "${CMAKE_CURRENT_BINARY_DIR}/jansson/lib/Release/jansson.lib"
+            # "C:\\Windows\\System32\\SetupApi.lib"
+            # "C:\\Windows\\System32\\Cfgmgr32.lib"
+            )
+        # needed for some MSVC installations
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO /FORCE:Multiple")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SAFESEH:NO /FORCE:Multiple")
+        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /SAFESEH:NO /FORCE:Multiple")
 endif ( )
 
 add_library ( ${PROJECT_NAME} SHARED
@@ -44,7 +54,7 @@ add_library ( ${PROJECT_NAME} SHARED
 
 target_include_directories ( ${PROJECT_NAME} BEFORE PRIVATE
         $ENV{WILTON_HOME}/devel/include
-        "${CMAKE_CURRENT_BINARY_DIR}/jansson/include"
+        ${CMAKE_CURRENT_BINARY_DIR}/jansson/include
 )
 
 if ( WIN32 )
@@ -52,7 +62,7 @@ if ( WIN32 )
             $ENV{WILTON_HOME}/devel/wilton_core.lib )
 endif ( )
 
-target_link_libraries ( ${PROJECT_NAME} ${LIBS})
+target_link_libraries ( ${PROJECT_NAME} PRIVATE ${LIBS})
 
 add_custom_target ( dist ALL
         COMMAND ${CMAKE_COMMAND} -E remove_directory dist
