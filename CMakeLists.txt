@@ -23,7 +23,10 @@ set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR} CACHE I
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -g")
 
-set(JANSSON_BUILD_DOCS OFF)
+set (JANSSON_BUILD_DOCS OFF CACHE BOOL "Disable jansson build docs")
+set (JANSSON_EXAMPLES OFF CACHE BOOL "Disable jansson build examples")
+set (JANSSON_WITHOUT_TESTS ON CACHE BOOL "Disable jansson build tests")
+
 include_directories(jansson/include)
 link_directories(jansson/lib)
 add_subdirectory(jansson)
@@ -31,10 +34,7 @@ add_subdirectory(jansson)
 set(SOURCES
     src/wilton_hub_reset_windows.cpp)
 
-set(LIBS ""
-    # libs here
-)
-
+set(LIBS "")
 if ( WIN32 )
         set(LIBS "")
 endif ( )
@@ -69,3 +69,5 @@ add_custom_target ( dist ALL
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${PROJECT_NAME}
         COMMENT "Preparing application bundle, directory: [${CMAKE_CURRENT_BINARY_DIR}/dist] ..." )
+
+add_dependencies(dist jansson)

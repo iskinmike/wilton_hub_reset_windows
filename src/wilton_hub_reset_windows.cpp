@@ -21,44 +21,9 @@
 
 namespace example {
 
-std::string hello(const std::string& input) {
-    // arbitrary C++ code here
-    return input + " from C++!";
-}
-
-std::string hello_again(const std::string& input) {
-    // arbitrary C++ code here
-    return input + " again from C++!";
-}
-
-// helper function
-char* wrapper_fun(void* ctx, const char* data_in, int data_in_len, char** data_out, int* data_out_len) {
-    try {
-        auto fun = reinterpret_cast<std::string(*)(const std::string&)> (ctx);
-        auto input = std::string(data_in, static_cast<size_t>(data_in_len));
-        std::string output = fun(input);
-        if (!output.empty()) {
-            // nul termination here is required only for JavaScriptCore engine
-            *data_out = wilton_alloc(static_cast<int>(output.length()) + 1);
-            std::memcpy(*data_out, output.c_str(), output.length() + 1);
-        } else {
-            *data_out = nullptr;
-        }
-        *data_out_len = static_cast<int>(output.length());
-        return nullptr;
-    } catch (...) {
-        auto what = std::string("CALL ERROR"); // std::string(e.what());
-        char* err = wilton_alloc(static_cast<int>(what.length()) + 1);
-        std::memcpy(err, what.c_str(), what.length() + 1);
-        return err;
-    }
-}
-
-
 #ifdef _WIN32
-int rest_hub(std::string pid, std::string vid, int type)
+int reset_smart_hub(std::string pid, std::string vid)
 {
-    (void) type;
     GUID *class_guid = nullptr;
     LPCSTR enumerator = TEXT("USB");
     HWND parent = nullptr;
@@ -95,11 +60,6 @@ int rest_hub(std::string pid, std::string vid, int type)
         std::string device_path(buffer);
         std::string vendor_id = vid; //{"05E3"};
         std::string product_id = pid; //{ "0608" };
-        // std::string vendor_id{"FFFF"};
-        // std::string product_id{ "0035" };
-
-        // std::string vendor_id{"0590"};
-        // std::string product_id{ "0028" };
 
         if (std::string::npos != device_path.find(vendor_id) && std::string::npos != device_path.find(product_id)){
             std::cout << "try to eject first child " << std::endl;
@@ -124,30 +84,28 @@ int rest_hub(std::string pid, std::string vid, int type)
 
 #endif
 
-//void reset(std::string pid, std::string vid, std::string type){
-//    (void) pid;
-//    (void) vid;
-//    (void) type;
-//}
-
 struct hub_settings {
     int vid;
     int pid;
-    int type;
 };
 
 std::string reset_hub(const hub_settings& set){
 #ifdef _WIN32
-    rest_hub(std::to_string(set.pid), std::to_string(set.vid), set.type);
+    reset_smart_hub(std::to_string(set.pid), std::to_string(set.vid));
 #endif
     return std::string{};
 }
 
+int get_integer_or_throw(const std::string& key, json_t* value) {
+    if (json_is_integer(value)) {
+        return static_cast<int>(json_integer_value(value));
+    }
+    throw std::invalid_argument(std::string{"Error: Key [" + key+ "] don't contains integer value"});
+}
 
 char* wrapper_reset_hub(void* ctx, const char* data_in, int data_in_len, char** data_out, int* data_out_len) {
     try {
-        auto fun = reinterpret_cast<std::string(*)(const std::string&)> (ctx);
-//        auto input = std::string(data_in, static_cast<size_t>(data_in_len));
+        auto fun = reinterpret_cast<std::string(*)(hub_settings)> (ctx);
 
         json_t *root = nullptr;
         json_error_t error;
@@ -158,10 +116,30 @@ char* wrapper_reset_hub(void* ctx, const char* data_in, int data_in_len, char** 
         }
 
         const int not_set = -1;
-        int id = 0;
+        int pid = not_set;
+        int vid = not_set;
 
+        /* obj is a JSON object */
+        const char *key = nullptr;
+        json_t *value = nullptr;
 
-        std::string output = fun(input);
+        json_object_foreach(root, key, value) {
+            auto key_str = std::string{key};
+            if ("pid" == key_str) {
+                pid = get_integer_or_throw(key_str, value);
+            } else if ("vid" == key_str) {
+                vid = get_integer_or_throw(key_str, value);
+            } else {
+                std::string err_msg = std::string{"Unknown data field: ["} + key + "]";
+                throw std::invalid_argument(err_msg);
+            }
+        }
+
+        hub_settings set;
+        set.pid = pid;
+        set.vid = vid;
+
+        std::string output = fun(set);
         if (!output.empty()) {
             // nul termination here is required only for JavaScriptCore engine
             *data_out = wilton_alloc(static_cast<int>(output.length()) + 1);
@@ -192,22 +170,9 @@ char* wilton_module_init() {
 
 
     // register 'hello' function
-    auto reset_hub_name = std::string("example_hello");
+    auto reset_hub_name = std::string("reset_hub");
     err = wiltoncall_register(reset_hub_name.c_str(), static_cast<int> (reset_hub_name.length()),
             reinterpret_cast<void*> (example::reset_hub), example::wrapper_reset_hub);
-    if (nullptr != err) return err;
-
-
-    // register 'hello' function
-    auto name_hello = std::string("example_hello");
-    err = wiltoncall_register(name_hello.c_str(), static_cast<int> (name_hello.length()),
-            reinterpret_cast<void*> (example::hello), example::wrapper_fun);
-    if (nullptr != err) return err;
-
-    // register 'hello_again' function
-    auto name_hello_again = std::string("example_hello_again");
-    err = wiltoncall_register(name_hello_again.c_str(), static_cast<int> (name_hello_again.length()),
-            reinterpret_cast<void*> (example::hello_again), example::wrapper_fun);
     if (nullptr != err) return err;
 
     // return success
