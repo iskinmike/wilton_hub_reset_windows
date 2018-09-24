@@ -22,13 +22,14 @@ define([
 
     // load shared lib on init
     dyload({
-        name: "wilton_smartec_reader"
+        name: "wilton_hub_reset_windows"
     });
     
+
     return {
         main: function() {
             print("Calling native module ...");
-            var resp = wiltoncall("read_smartec_input", 2000);
+            var resp = wiltoncall("reset_hub", {"pid": 0x0608, "vid": 0x05E3});
             print("Call response: [" + resp + "]");
         }
     };

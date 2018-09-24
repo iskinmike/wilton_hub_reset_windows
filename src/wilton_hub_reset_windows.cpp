@@ -10,6 +10,7 @@
 #include <Windows.h>
 #include <SetupAPI.h>
 #include <cfgmgr32.h>
+#include <cstdio>
 #endif
 #include <iostream>
 #include <thread>
@@ -20,17 +21,18 @@
 #include "jansson.h"
 
 namespace example {
-
+// int reset_smart_hub(std::string pid, std::string vid);
 #ifdef _WIN32
 int reset_smart_hub(std::string pid, std::string vid)
 {
+    std::cout << "reset_smart_hub open " << std::endl;
     GUID *class_guid = nullptr;
     LPCSTR enumerator = TEXT("USB");
     HWND parent = nullptr;
-    DWORD falgs = DIGCF_ALLCLASSES | DIGCF_PRESENT;
+    DWORD falgs = DIGCF_ALLCLASSES ;//| DIGCF_PRESENT;
 
     HDEVINFO dev_info;
-
+    std::cout << "SetupDiGetClassDevs call " << std::endl;
     dev_info = SetupDiGetClassDevs(NULL, TEXT("USB"), NULL, falgs);
     if (INVALID_HANDLE_VALUE == dev_info) {
         std::cout << "error: " << GetLastError() << std::endl;
@@ -82,6 +84,9 @@ int reset_smart_hub(std::string pid, std::string vid)
     return 0;
 }
 
+void print_test(std::string pid, std::string vid){
+    std::cout << "reset_smart_hub start " << pid << " | " << vid << std::endl;
+}
 #endif
 
 struct hub_settings {
@@ -91,7 +96,13 @@ struct hub_settings {
 
 std::string reset_hub(const hub_settings& set){
 #ifdef _WIN32
-    reset_smart_hub(std::to_string(set.pid), std::to_string(set.vid));
+    std::cout << "reset_smart_hub start ["  << set.pid << " | " << set.vid << std::endl;
+    char pid[32];
+    char vid[32];
+    sprintf(pid, "%x", set.pid);
+    sprintf(vid, "%x", set.vid);
+    print_test(std::string(pid), std::string(vid));
+    reset_smart_hub(std::string(pid), std::string(vid));
 #endif
     return std::string{};
 }
@@ -105,8 +116,8 @@ int get_integer_or_throw(const std::string& key, json_t* value) {
 
 char* wrapper_reset_hub(void* ctx, const char* data_in, int data_in_len, char** data_out, int* data_out_len) {
     try {
-        auto fun = reinterpret_cast<std::string(*)(hub_settings)> (ctx);
-
+        auto fun = reinterpret_cast<std::string(*)(const hub_settings&)> (ctx);
+        std::cout << "wrapper_reset_hub" << std::endl;
         json_t *root = nullptr;
         json_error_t error;
 
@@ -138,8 +149,10 @@ char* wrapper_reset_hub(void* ctx, const char* data_in, int data_in_len, char** 
         hub_settings set;
         set.pid = pid;
         set.vid = vid;
-
+        std::cout << "call func " << pid << " | " << vid << std::endl;
+        std::cout << "call func " << set.pid << " | " << set.vid << std::endl;
         std::string output = fun(set);
+        std::cout << "end func" << std::endl;
         if (!output.empty()) {
             // nul termination here is required only for JavaScriptCore engine
             *data_out = wilton_alloc(static_cast<int>(output.length()) + 1);
@@ -148,6 +161,7 @@ char* wrapper_reset_hub(void* ctx, const char* data_in, int data_in_len, char** 
             *data_out = nullptr;
         }
         *data_out_len = static_cast<int>(output.length());
+        std::cout << "wrapper_reset_hub end" << std::endl;
         return nullptr;
     } catch (...) {
         auto what = std::string("CALL ERROR"); // std::string(e.what());
