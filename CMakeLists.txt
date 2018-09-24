@@ -40,6 +40,7 @@ if ( WIN32 )
             "C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.1A\\Lib\\x64\\SetupApi.lib"
             "C:\\Program Files (x86)\\Windows Kits\\8.1\\Lib\\winv6.3\\um\\x64\\Cfgmgr32.lib"
             "${CMAKE_CURRENT_BINARY_DIR}/jansson/lib/Release/jansson.lib"
+            "C:\\Windows\\System32\\Winusb.lib"
             # "C:\\Windows\\System32\\SetupApi.lib"
             # "C:\\Windows\\System32\\Cfgmgr32.lib"
             )

@@ -41,17 +41,17 @@ int reset_smart_hub(std::string pid, std::string vid)
 
     std::cout << "success to get devices info " << std::endl;
 
-    SP_DEVINFO_DATA devinfo_data;
-    devinfo_data.cbSize = sizeof(devinfo_data);
+    SP_DEVINFO_DATA dev_info_data;
+    dev_info_data.cbSize = sizeof(dev_info_data);
     DWORD pos = 1;
-    auto res = SetupDiEnumDeviceInfo(dev_info, pos, &devinfo_data);
+    auto res = SetupDiEnumDeviceInfo(dev_info, pos, &dev_info_data);
 
-    while (SetupDiEnumDeviceInfo(dev_info, pos, &devinfo_data)) {
+    while (SetupDiEnumDeviceInfo(dev_info, pos, &dev_info_data)) {
 
         TCHAR buffer[MAX_DEVICE_ID_LEN];
         ULONG get_flags = 0;
-        auto status = CM_Get_Device_ID(devinfo_data.DevInst, buffer, MAX_PATH, get_flags);
-        devinfo_data;
+        auto status = CM_Get_Device_ID(dev_info_data.DevInst, buffer, MAX_PATH, get_flags);
+        dev_info_data;
         if (status != CR_SUCCESS) {
             std::cout << "error: " << GetLastError() << std::endl;
             return 1;
@@ -63,11 +63,74 @@ int reset_smart_hub(std::string pid, std::string vid)
         std::string vendor_id = vid; //{"05E3"};
         std::string product_id = pid; //{ "0608" };
 
+        DWORD len = 0;
+        auto err_detail_len = ::SetupDiGetDeviceInterfaceDetail(
+                dev_info,
+                std::addressof(dev_info_data),
+                nullptr,
+                0,
+                std::addressof(len),
+                nullptr);
+        auto errcode_detail_len = ::GetLastError();
+        if (!(0 == err_detail_len && ERROR_INSUFFICIENT_BUFFER == errcode_detail_len)) throw support::exception(TRACEMSG(
+                "USB 'SetupDiGetDeviceInterfaceDetail' length error, VID: [" + sl::support::to_string(vid) + "]," +
+                " PID: [" + sl::support::to_string(pid) + "]" +
+                " index: [" + sl::support::to_string(dev_idx) + "]" +
+                " error: [" + sl::utils::errcode_to_string(errcode_detail_len) + "]"));
+
+        auto detail_data_mem = std::vector<char>();
+        detail_data_mem.resize(static_cast<size_t>(len));
+        auto detail_data = reinterpret_cast<PSP_DEVICE_INTERFACE_DETAIL_DATA>(detail_data_mem.data());
+        detail_data->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
+
+        DWORD required = 0;
+        auto err_detail = ::SetupDiGetDeviceInterfaceDetail(
+                dev_info,
+                std::addressof(dev_info_data),
+                detail_data,
+                len,
+                std::addressof(required),
+                nullptr);
+        if (0 == err_detail) throw support::exception(TRACEMSG(
+                "USB 'SetupDiGetDeviceInterfaceDetail' error, VID: [" + sl::support::to_string(vid) + "]," +
+                " PID: [" + sl::support::to_string(pid) + "]" +
+                " index: [" + sl::support::to_string(dev_idx) + "]" +
+                " error: [" + sl::utils::errcode_to_string(::GetLastError()) + "]"));
+
+        HANDLE handle = ::CreateFileW(
+                detail_data->DevicePath,
+                GENERIC_READ | GENERIC_WRITE,
+                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                nullptr,
+                OPEN_EXISTING,
+                FILE_FLAG_OVERLAPPED,
+                nullptr);
+        PWINUSB_INTERFACE_HANDLE winusb_interface_handler;
+        WinUsb_Initialize(handle, winusb_interface_handler);
+
+        USB_DEVICE_DESCRIPTOR udd;
+        memset(&udd, 0, sizeof(udd));
+        ULONG LengthTransferred = 0;
+
+        WinUsb_GetDescriptor(
+            winusb_interface_handler, // returned by WinUsbInitialize
+            URB_FUNCTION_GET_DESCRIPTOR_FROM_DEVICE,
+            0,     // not sure if we need this
+            0x409, // not sure if we need this
+            &udd,
+            sizeof(udd),
+            &LengthTransferred);
+
+        udd->idVendor;
+        udd->idProduct;
+
+        std::cout << "vid: " << udd->idVendor << " | pid: " << udd->idProduct << std::endl;
+
         if (std::string::npos != device_path.find(vendor_id) && std::string::npos != device_path.find(product_id)){
             std::cout << "try to eject first child " << std::endl;
             // CM_Query_And_Remove_SubTree();
             // CM_Request_Device_Eject();
-            auto eject_result = CM_Query_And_Remove_SubTree(devinfo_data.DevInst, NULL, NULL, 0, 0);
+            auto eject_result = CM_Query_And_Remove_SubTree(dev_info_data.DevInst, NULL, NULL, 0, 0);
             if (CR_SUCCESS != eject_result) {
                 std::cout << "Error " << eject_result << std::endl;
             }
