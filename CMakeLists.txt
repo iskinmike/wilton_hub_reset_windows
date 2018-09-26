@@ -21,7 +21,7 @@ set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} CACHE INTERNAL 
 set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR} CACHE INTERNAL "" )
 set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR} CACHE INTERNAL "" )
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -g")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11")
 
 set (JANSSON_BUILD_DOCS OFF CACHE BOOL "Disable jansson build docs")
 set (JANSSON_EXAMPLES OFF CACHE BOOL "Disable jansson build examples")
@@ -36,14 +36,19 @@ set(SOURCES
 
 set(LIBS "")
 if ( WIN32 )
+    if ( NOT DEFINED ARCHITECT_X32)
         set(LIBS
-            "C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.1A\\Lib\\x64\\SetupApi.lib"
-            "C:\\Program Files (x86)\\Windows Kits\\8.1\\Lib\\winv6.3\\um\\x64\\Cfgmgr32.lib"
+            "C:/WinDDK/7600.16385.1/lib/win7/amd64/setupapi.lib"
+            "C:/WinDDK/7600.16385.1/lib/win7/amd64/cfgmgr32.lib"
             "${CMAKE_CURRENT_BINARY_DIR}/jansson/lib/Release/jansson.lib"
-            "C:\\Windows\\System32\\Winusb.lib"
-            # "C:\\Windows\\System32\\SetupApi.lib"
-            # "C:\\Windows\\System32\\Cfgmgr32.lib"
-            )
+        )
+    else ( )
+        set(LIBS
+            "C:/WinDDK/7600.16385.1/lib/wxp/i386/setupapi.lib"
+            "C:/WinDDK/7600.16385.1/lib/wxp/i386/cfgmgr32.lib"
+            "${CMAKE_CURRENT_BINARY_DIR}/jansson/lib/Release/jansson.lib"
+        )
+    endif ( )
         # needed for some MSVC installations
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO /FORCE:Multiple")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SAFESEH:NO /FORCE:Multiple")

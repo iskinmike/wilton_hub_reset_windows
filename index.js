@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, alex at staticlibs.net
+ * Copyright 2018, mike at myasnikov.mike@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +24,14 @@ define([
     dyload({
         name: "wilton_hub_reset_windows"
     });
-    
 
     return {
         main: function() {
             print("Calling native module ...");
-            var resp = wiltoncall("reset_hub", {"pid": 0x0608, "vid": 0x05E3});
+            var vendor_id = 0x05e3;
+            var product_id = 0x0608;
+
+            var resp = wiltoncall("reset_hub", {"pid": product_id, "vid": vendor_id, "type":"hub"});
             print("Call response: [" + resp + "]");
         }
     };
